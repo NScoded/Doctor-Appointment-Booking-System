@@ -12,31 +12,34 @@ const FindADoctor = () => {
   const [searchType, setSearchType] = useState("hospital");
   const [doctorSearchField, setDoctorSearchField] = useState("name");
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchHospitals();
-    fetchDoctors();
+    if (!API) {
+      console.error("VITE_API_URL not defined");
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [hospitalRes, doctorRes] = await Promise.all([
+          axios.get(`${API}/hospitals`),
+          axios.get(`${API}/doctors`)
+        ]);
+
+        setHospitals(hospitalRes.data || []);
+        setDoctors(doctorRes.data || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
-
-  const fetchHospitals = async () => {
-    try {
-      const res = await axios.get(`${API}/hospitals`);
-      setHospitals(res.data || []);
-    } catch (error) {
-      console.error("Error fetching hospitals", error);
-    }
-  };
-
-  const fetchDoctors = async () => {
-    try {
-      const res = await axios.get(`${API}/doctors`);
-      setDoctors(res.data || []);
-    } catch (error) {
-      console.error("Error fetching doctors", error);
-    }
-  };
 
   /* 🔍 Filters */
   const filteredHospitals = hospitals.filter((h) =>
@@ -57,7 +60,6 @@ const FindADoctor = () => {
     return true;
   });
 
-  /* 🏥 Hospital name by HID */
   const getHospitalName = (hid) => {
     const hospital = hospitals.find(
       (h) => Number(h.HID) === Number(hid)
@@ -69,6 +71,17 @@ const FindADoctor = () => {
     if (!hid) return;
     navigate(`/doctors/${hid}`);
   };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          Loading...
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -189,7 +202,6 @@ const FindADoctor = () => {
                 </span>
 
                 <img src={logo} alt={d.NAME} className="w-24 h-24 mb-4" />
-
                 <h3 className="text-xl font-bold">{d.NAME}</h3>
                 <p className="text-gray-600">{d.SPECIALISATION}</p>
 
