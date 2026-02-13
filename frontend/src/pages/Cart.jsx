@@ -1,74 +1,133 @@
-
-import React, { useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import Header from "./Header";
+import axios from "axios";
 const API=import.meta.env.VITE_API_URL;
 
-export default function CreateNewUser() {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    NAME: "",
-    DOB: "",
-    PHONE: "",
-    EMAIL: "",
-    PASS: "",
-    GENDER: "",
-    ADDR: "",
-    JOB: "",
-  });
+const Cart = ({ showHeader = true }) => {
+  const [cart, setCart] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  const loadCart = async () => {
+    const user = JSON.parse(sessionStorage.getItem("user"));
+    if (!user || !user.pid) return;
+
+    try {
+      const res = await axios.get(`${API}/cart/${user.pid}`);
+      setCart(res.data);
+
+      const sum = res.data.reduce((acc, doc) => acc + (Number(doc.FEES) || 0), 0);
+      setTotal(sum);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleRemove = async (cid) => {
+    try {
+      await axios.delete(`${API}/cart/${cid}`);
+      loadCart(); // refresh cart
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+    }
+  };
 
-    if (!formData.NAME || !formData.PHONE || !formData.PASS) {
-      alert("Name, Phone, and Password are required.");
+  const handleCheckout = async () => {
+    if (cart.length === 0) {
+      alert("Your cart is empty.");
       return;
     }
 
-    try {
-      const res = await axios.post(`${API}/patients`, formData);
-      if (res.data.success) {
-        alert("Account created successfully! Please login.");
-        navigate("/login");
-      }
-    } catch (err) {
-      console.error(err.response?.data || err.message);
-      alert("Failed to create account. " + (err.response?.data?.message || ""));
+    const user = JSON.parse(sessionStorage.getItem("user")); // get logged-in patient
+    console.log("Logged-in user:", user);
+
+    if (!user || !user.pid) {
+      alert("You must be logged in as a patient to book appointments.");
+      return;
     }
+
+    setLoading(true);
+
+    try {
+      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+      for (let doc of cart) {
+        const res = await axios.post("${API}/appointments", {
+          pid: user.pid,
+          did: doc.DID,
+          hid: doc.HID,
+          appointment_date: today,
+        });
+        console.log("Backend response:", res.data);
+      }
+
+      // ✅ Clear cart from DB after successful booking
+      await axios.delete(`${API}/cart/clear/${user.pid}`);
+
+      alert("✅ Your appointments have been confirmed!");
+      setCart([]);
+      setTotal(0);
+    } catch (error) {
+      console.error("Error booking appointments:", error);
+      alert("❌ Something went wrong while booking. Please try again.");
+    }
+
+    setLoading(false);
   };
 
   return (
     <>
-    <Header/>
-    <div className="min-h-screen pt-16 pb-8 flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-200">
+      {showHeader && <Header />}
+      <div className="min-h-screen bg-[#F4F6F8] px-4 py-10">
+        <h2 className="text-2xl font-bold text-[#333] mb-6">Appointment Cart</h2>
 
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Create New Account</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="text" name="NAME" placeholder="Full Name" value={formData.NAME} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="date" name="DOB" placeholder="Date of Birth" value={formData.DOB} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="text" name="GENDER" placeholder="Gender" value={formData.GENDER} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="text" name="PHONE" placeholder="Phone" value={formData.PHONE} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="email" name="EMAIL" placeholder="Email" value={formData.EMAIL} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="password" name="PASS" placeholder="Password" value={formData.PASS} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="text" name="ADDR" placeholder="Address" value={formData.ADDR} onChange={handleChange} className="w-full p-2 border rounded" />
-          <input type="text" name="JOB" placeholder="Job / Profession" value={formData.JOB} onChange={handleChange} className="w-full p-2 border rounded" />
-          <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white p-2 rounded mt-4">Sign Up</button>
-        </form>
-        <p className="text-center mt-4 text-gray-500">
-          Already have an account?{" "}
-          <span className="text-blue-500 cursor-pointer" onClick={() => navigate("/login")}>
-            Login
-          </span>
-        </p>
+        {cart.length === 0 ? (
+          <p className="text-gray-600 italic">Your cart is empty.</p>
+        ) : (
+          <div className="space-y-4">
+            {cart.map((doc) => (
+              <div
+                key={doc.DID}
+                className="p-4 border rounded-md shadow-sm bg-white flex justify-between items-center"
+              >
+                <div>
+                  <h4 className="text-lg font-semibold text-[#333]">{doc.NAME}</h4>
+                  <p className="text-sm text-gray-600">
+                    Specialisation: <span className="text-red-600">{doc.SPECIALISATION}</span>
+                  </p>
+                  <p className="text-sm text-gray-600">Degree: {doc.DEGREE}</p>
+                  <p className="text-sm text-gray-600">Institute: {doc.INSTITUTE}</p>
+                  <p className="text-sm text-gray-600">Phone: {doc.PHONE}</p>
+                  <p className="text-sm text-gray-600">Fees: ₹{doc.FEES}</p>
+                </div>
+                <button
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                  onClick={() => handleRemove(doc.CID)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+
+            <div className="bg-white p-4 rounded-md shadow-md mt-6">
+              <h3 className="text-lg font-bold text-[#333]">Total Fees: ₹{total}</h3>
+              <button
+                className="mt-4 bg-[#30C48D] hover:bg-[#2aad7d] text-white px-6 py-2 rounded-lg"
+                onClick={handleCheckout}
+                disabled={loading}
+              >
+                {loading ? "Booking..." : "Confirm Your Appointment"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
     </>
   );
-}
+};
+
+export default Cart;
