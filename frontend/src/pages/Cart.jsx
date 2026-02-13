@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "./Header";
+const API=import.meta.env.VITE_API_URL;
 
 export default function CreateNewUser() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ export default function CreateNewUser() {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/patients", formData);
+      const res = await axios.post(`${API}/patients`, formData);
       if (res.data.success) {
         alert("Account created successfully! Please login.");
         navigate("/login");
