@@ -36,48 +36,47 @@ const Cart = ({ showHeader = true }) => {
     }
   };
 
-  const handleCheckout = async () => {
-    if (cart.length === 0) {
-      alert("Your cart is empty.");
-      return;
+ const handleCheckout = async () => {
+  if (cart.length === 0) {
+    alert("Your cart is empty.");
+    return;
+  }
+
+  const user = JSON.parse(sessionStorage.getItem("user"));
+
+  if (!user || !user.pid) {
+    alert("You must be logged in as a patient to book appointments.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    for (let doc of cart) {
+      await axios.post(`${API}/appointments`, {
+        pid: user.pid,
+        did: doc.DID,
+        hid: doc.HID,
+        appointment_date: today,
+      });
     }
 
-    const user = JSON.parse(sessionStorage.getItem("user")); // get logged-in patient
-    console.log("Logged-in user:", user);
+    await axios.delete(`${API}/cart/clear/${user.pid}`);
 
-    if (!user || !user.pid) {
-      alert("You must be logged in as a patient to book appointments.");
-      return;
-    }
+    alert("✅ Your appointments have been confirmed!");
+    setCart([]);
+    setTotal(0);
 
-    setLoading(true);
+  } catch (error) {
+    console.error("Error booking appointments:", error);
+    alert("❌ Something went wrong while booking.");
+  }
 
-    try {
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  setLoading(false);
+};
 
-      for (let doc of cart) {
-        const res = await axios.post("${API}/appointments", {
-          pid: user.pid,
-          did: doc.DID,
-          hid: doc.HID,
-          appointment_date: today,
-        });
-        console.log("Backend response:", res.data);
-      }
-
-      // ✅ Clear cart from DB after successful booking
-      await axios.delete(`${API}/cart/clear/${user.pid}`);
-
-      alert("✅ Your appointments have been confirmed!");
-      setCart([]);
-      setTotal(0);
-    } catch (error) {
-      console.error("Error booking appointments:", error);
-      alert("❌ Something went wrong while booking. Please try again.");
-    }
-
-    setLoading(false);
-  };
 
   return (
     <>
