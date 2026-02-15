@@ -14,7 +14,7 @@ router.get("/:did", (req, res) => {
 
 
 /* ADD doctor */
-app.use("/doctors", require("./routes/doctor"));
+
 router.post("/", (req, res) => {
   const {
     hid,
