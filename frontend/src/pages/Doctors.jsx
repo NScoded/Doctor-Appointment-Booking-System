@@ -72,7 +72,10 @@ const Doctor = () => {
           to="/findadoctor"
           className="text-[#3F8EFC] underline mb-4 inline-block"
         >
+        <button>
           ← Back to Find a Doctor
+
+        </button>
         </Link>
 
         {hospital && (
@@ -80,20 +83,24 @@ const Doctor = () => {
             <h2 className="text-2xl font-bold text-[#333] mb-2">
               {hospital.NAME}
             </h2>
-            <p className="text-gray-600">Hospital ID: {hospital.HID}</p>
-            <p className="text-gray-600">{hospital.ADDR}</p>
-            <p className="text-gray-600">{hospital.EMAIL}</p>
-            <p className="text-gray-600">{hospital.PHONE}</p>
+            <p className="text-gray-600">Address: {hospital.ADDR}</p>
+            <p className="text-gray-600">Email: {hospital.EMAIL}</p>
+            <p className="text-gray-600">Phone: {hospital.PHONE}</p>
 
             {hospital.WEBSITE && (
+              <>
+              <p>
+                Website:{" "}
               <a
                 href={hospital.WEBSITE}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-[#3F8EFC] underline"
               >
-                Visit Website
+                {hospital.WEBSITE}
               </a>
+              </p>
+              </>
             )}
           </div>
         )}

@@ -121,6 +121,7 @@ function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                placeholder="demo@gmail.com"
               />
             </div>
 
@@ -133,6 +134,7 @@ function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                placeholder="pass"
               />
             </div>
 
